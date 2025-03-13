@@ -1,4 +1,4 @@
-module gice
+module giceware
 
 go 1.23.6
 

@@ -2,18 +2,74 @@ package main
 
 import (
 	"fmt"
+	"giceware/data"
 	"log"
+	"math/rand/v2"
 	"os"
+	"strconv"
 
 	"github.com/urfave/cli/v2"
 )
 
-type diceroll struct {
-	die0 int8
-	die1 int8
-	die2 int8
-	die3 int8
-	die4 int8
+func concatNum(a, b int) int {
+	out, _ := strconv.Atoi(strconv.Itoa(a) + strconv.Itoa(b))
+	return out
+}
+
+func rollDie() int {
+	return rand.IntN(6) + 1
+}
+
+func rollWord() int {
+	var word int
+	var arr []int
+	for i := 0; i < 5; i++ {
+		arr = append(arr, rollDie())
+	}
+	for i, element := range arr {
+		if i == 0 {
+			word = element
+		} else {
+			word = concatNum(word, element)
+		}
+
+	}
+	return word
+}
+
+func rollPhrase(wordsNum int) []int {
+	var arr []int
+	for i := 0; i < wordsNum; i++ {
+		arr = append(arr, rollWord())
+	}
+	return arr
+}
+
+func sprinkleNumbers(phrase []string, numberOfNumbers int) []string {
+	for i := 0; i < numberOfNumbers; i++ {
+		num := rand.IntN(10)
+		position := rand.IntN(len(phrase))
+		phrase[position] += strconv.Itoa(num)
+	}
+	return phrase
+}
+
+func generatePhrase(numberOfWOrds int, numberOfNumbers int, separator string) string {
+	wordsInNumbers := rollPhrase(numberOfWOrds)
+	var words []string
+	for _, word := range wordsInNumbers {
+		words = append(words, data.Wordlist[word])
+	}
+	words = sprinkleNumbers(words, numberOfNumbers)
+	var phrase string
+	for i, word := range words {
+		if i == 0 {
+			phrase = word
+		} else {
+			phrase = phrase + separator + word
+		}
+	}
+	return phrase
 }
 
 func main() {
@@ -25,26 +81,32 @@ func main() {
 				Aliases: []string{"w"},
 				Value:   6,
 			},
-			&cli.StringFlag{
-				Name:    "config",
-				Usage:   "Override default config",
-				Aliases: []string{"c"},
-				Value:   "~/.config/gice/giceConfig.toml",
-			},
 			&cli.Int64Flag{
 				Name:    "numbers",
 				Usage:   "set the number or numbers, please note that if the number of numbers is larger than the  number of words you will get multi digit numbers",
 				Aliases: []string{"n"},
 				Value:   1,
 			},
+			&cli.StringFlag{
+				Name:    "separator",
+				Usage:   "Set the separation character",
+				Aliases: []string{"s"},
+				Value:   "-",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
-			i := ctx.Int64("words")
-			if i <= 0 {
+			words := ctx.Int64("words")
+			if words <= 0 {
 				return fmt.Errorf("can't set 0 or less words")
-			} else {
-				fmt.Printf("Words: %v\n", i)
 			}
+			numbers := ctx.Int64("numbers")
+			if numbers < 0 {
+				return fmt.Errorf("cant set negative amount of numbers")
+			}
+			seperator := ctx.String("separator")
+			phrase := generatePhrase(int(words), int(numbers), seperator)
+			fmt.Printf("Your passphrase is:\n%v\n\n", phrase)
+
 			return nil
 		},
 	}
